@@ -187,7 +187,8 @@ class _InstallLibs(install_lib):
             fileTypes = [".dll", ".pyd"]
             if extra_bin is not None:
                 libDirs.extend(
-                    (build_dir / pathlib.Path(x)) for x in extra_bin
+                    (build_dir / pathlib.Path(x) / "Release")
+                    for x in extra_bin
                 )
             libs = []
             for libdir in libDirs:
