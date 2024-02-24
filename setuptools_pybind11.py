@@ -1,19 +1,14 @@
 import logging
 from typing import List, Optional
-import struct
 import os
 import shutil
 import pathlib
 import sys
 import subprocess
 
-# there isn't a setuptools equivalent for this...
-from distutils.command.install_data import install_data
-
 import setuptools
 from setuptools.command.build_ext import build_ext
 from setuptools.command.install_lib import install_lib
-from setuptools.command.install_scripts import install_scripts
 
 SOURCE_DIR, _ = os.path.split(__file__)
 IS_WINDOWS = sys.platform == "win32"
@@ -64,6 +59,9 @@ class _Build(build_ext):
         for extension in self.extensions:
             if isinstance(extension, PyBindModule):
                 self.build(extension)
+
+        # run the normal func for "normal" extensions
+        super().run()
 
     def build(self, extension: PyBindModule):
         extension.log("Preparing the build environment")
@@ -153,6 +151,7 @@ class _Build(build_ext):
         # store this in the distribution for use later
         self.distribution.bin_dir = bin_dir  # type: ignore
         self.distribution.lib_name = pyd_path  # type: ignore
+        self.distribution.extra_bin = extension.extraBinDirs  # type: ignore
 
         extension.log(
             f"Moving build python module '{pyd_path}' -> '{ext_path}'"
@@ -160,7 +159,10 @@ class _Build(build_ext):
         # copy lib to the name setuptools wants it to be
         shutil.copy(pyd_path, ext_path)
 
-        # Next _InstallLibs is run
+        # copy any dependencies
+        # TODO use additional bin dirs
+
+        # TODO stubs
 
 
 class _InstallLibs(install_lib):
@@ -172,51 +174,38 @@ class _InstallLibs(install_lib):
 
         bin_dir: pathlib.Path = self.distribution.bin_dir  # type: ignore
         lib_name: pathlib.Path = self.distribution.lib_name  # type: ignore
+        extra_bin: Optional[List[str]
+                            ] = self.distribution.extra_bin  # type: ignore
 
-        # Just a list because it's a small number of items
-        fileTypes = [".so", ".dll", ".pyd"]
-        # copy any dependencies
-        # TODO use additional bin dirs
-        libs = []
-        for file in os.listdir(bin_dir):
-            if file == lib_name.name:
-                # skip the primary lib we already copied
-                continue
-            _, ext = os.path.splitext(file)
-            if ext in fileTypes:
-                # Copy the file
-                src = bin_dir / file
-                dest = os.path.join(self.build_dir, file)
-                libs.append(file)
-                self.distribution.announce(f'Copying lib: {src} -> {dest}')
-                shutil.copy(src, dest)
-
-        # TODO stubs
-
-        #self.distribution.data_files = [
-        #os.path.join(self.install_dir, lib) for lib in libs
-        #]
+        libDirs = [bin_dir]
+        # Copy additional dependencies
+        # no need to do this on linux, since you should be using auditwheel anyway
+        if IS_WINDOWS:
+            # Just a list because it's a small number of items
+            fileTypes = [".dll", ".pyd"]
+            if extra_bin is not None:
+                libDirs.extend((bin_dir / pathlib.Path(x)) for x in extra_bin)
+            libs = []
+            for libdir in libDirs:
+                for file in os.listdir(libdir):
+                    if file == lib_name.name:
+                        # skip the primary lib we already copied
+                        continue
+                    _, ext = os.path.splitext(file)
+                    if ext in fileTypes:
+                        # Copy the file
+                        src = libdir / file
+                        dest = os.path.join(self.build_dir, file)
+                        libs.append(file)
+                        self.distribution.announce(
+                            f'Copying lib: {src} -> {dest}'
+                        )
+                        shutil.copy(src, dest)
 
         # We already build the libs in _Build
         self.skip_build = True
         # Call the normal install_lib
         super().run()
-
-        # TODO is this right?
-        # Next _InstallScripts is run
-
-
-class _InstallScripts(install_scripts):
-
-    def run(self) -> None:
-        self.skip_build = True
-        return super().run()
-
-
-class _InstallData(install_data):
-
-    def run(self) -> None:
-        return super().run()
 
 
 def setup(modules: List[PyBindModule], *args, **kwargs):
@@ -226,8 +215,6 @@ def setup(modules: List[PyBindModule], *args, **kwargs):
         cmdclass={
             'build_ext': _Build,
             'install_lib': _InstallLibs,
-            'install_scripts': _InstallScripts,
-            'install_data': _InstallData,  # type: ignore
         },
         **kwargs
     )
