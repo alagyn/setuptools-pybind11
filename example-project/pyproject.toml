@@ -3,6 +3,7 @@ requires = [
     "setuptools",
     "wheel",
     #"setuptools-pybind11" should also have this
+    "cmake", # shouldn't need this, just use setuptools-pybind11[cmake]
 ]
 build-backend = "setuptools.build_meta"
 

@@ -71,8 +71,6 @@ class _Build(build_ext):
         os.makedirs(build_dir, exist_ok=True)
         os.makedirs(ext_path.parent.absolute(), exist_ok=True)
 
-        extension.log("Configuring cmake project")
-
         try:
             # Use env var, if available
             pyRoot = os.environ['PY_ROOT']
@@ -93,6 +91,7 @@ class _Build(build_ext):
         # Add user supplied args
         args.extend(extension.extraConfigOptions)
 
+        extension.log("Configuring cmake project")
         ret = subprocess.call(args, env=env)
 
         if ret != 0:
