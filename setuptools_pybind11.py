@@ -118,19 +118,17 @@ class _Build(build_ext):
                 f"Error building pybind extension '{extension.name}': Could not build cmake project"
             )
 
-        bin_dir = build_dir
+        primary_bin_dir = build_dir
         if extension.binPrefix is not None:
-            bin_dir /= extension.binPrefix
+            primary_bin_dir /= extension.binPrefix
 
         if IS_WINDOWS:
-            bin_dir /= "Release"
+            primary_bin_dir /= "Release"
 
-        bin_dir = bin_dir.resolve()
-
-        extension.log(f"Using bin directory {bin_dir}")
+        extension.log(f"Using bin directory {primary_bin_dir}")
 
         def isLibFile(filename: str) -> bool:
-            fullPath = os.path.join(bin_dir, filename)
+            fullPath = os.path.join(primary_bin_dir, filename)
             if not os.path.isfile(fullPath):
                 return False
             name, ext = os.path.splitext(filename)
@@ -139,7 +137,8 @@ class _Build(build_ext):
             return name.startswith(extension.name)
 
         potentials = [
-            bin_dir / pyd for pyd in os.listdir(bin_dir) if isLibFile(pyd)
+            primary_bin_dir / pyd for pyd in os.listdir(primary_bin_dir)
+            if isLibFile(pyd)
         ]
 
         if len(potentials) == 0:
@@ -150,7 +149,8 @@ class _Build(build_ext):
         pyd_path = potentials[0]
 
         # store this in the distribution for use later
-        self.distribution.bin_dir = bin_dir  # type: ignore
+        self.distribution.build_dir = build_dir  # type: ignore
+        self.distribution.primary_bin_dir = primary_bin_dir  # type: ignore
         self.distribution.lib_name = pyd_path  # type: ignore
         self.distribution.extra_bin = extension.extraBinDirs  # type: ignore
 
@@ -173,19 +173,22 @@ class _InstallLibs(install_lib):
 
     def run(self) -> None:
 
-        bin_dir: pathlib.Path = self.distribution.bin_dir  # type: ignore
+        build_dir: pathlib.Path = self.distribution.build_dir  # type: ignore
+        primary_bin_dir: pathlib.Path = self.distribution.primary_bin_dir  # type: ignore
         lib_name: pathlib.Path = self.distribution.lib_name  # type: ignore
         extra_bin: Optional[List[str]
                             ] = self.distribution.extra_bin  # type: ignore
 
-        libDirs = [bin_dir]
+        libDirs = [primary_bin_dir]
         # Copy additional dependencies
         # no need to do this on linux, since you should be using auditwheel anyway
         if IS_WINDOWS:
             # Just a list because it's a small number of items
             fileTypes = [".dll", ".pyd"]
             if extra_bin is not None:
-                libDirs.extend((bin_dir / pathlib.Path(x)) for x in extra_bin)
+                libDirs.extend(
+                    (build_dir / pathlib.Path(x)) for x in extra_bin
+                )
             libs = []
             for libdir in libDirs:
                 for file in os.listdir(libdir):
