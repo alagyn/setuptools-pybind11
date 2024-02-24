@@ -1,12 +1,16 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = [
+    "setuptools",
+    "wheel",
+    #"setuptools-pybind11" should also have this
+]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "setuptools-pybind11"
+name = "example"
 version = "0.1.0"
 authors = [{ name = "Alagyn" }]
-description = "Setuptools extension for building pybind11 libraries with CMake"
+description = "Example pybind11 library"
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
