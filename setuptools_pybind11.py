@@ -110,6 +110,8 @@ class _Build(build_ext):
         if IS_WINDOWS:
             args.append("--config=Release")
 
+        extension.log("Building cmake project")
+
         ret = subprocess.call(args, env=env)
 
         if ret != 0:
