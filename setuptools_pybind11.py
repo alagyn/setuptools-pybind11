@@ -8,7 +8,6 @@ import subprocess
 
 import setuptools
 from setuptools.command.build_ext import build_ext
-from setuptools.command.install_lib import install_lib
 
 SOURCE_DIR, _ = os.path.split(__file__)
 IS_WINDOWS = sys.platform == "win32"
@@ -50,7 +49,7 @@ class PyBindModule(setuptools.Extension):
 
     def log(self, msg: str):
         # log with the module name at the start
-        logging.info(f'{self.name}: {msg}')
+        logging.info(f'\033[1;33m{self.name}: {msg}\033[0m')
 
 
 class _Build(build_ext):
@@ -148,12 +147,6 @@ class _Build(build_ext):
 
         pyd_path = potentials[0]
 
-        # store this in the distribution for use later
-        self.distribution.build_dir = build_dir  # type: ignore
-        self.distribution.primary_bin_dir = primary_bin_dir  # type: ignore
-        self.distribution.lib_name = pyd_path  # type: ignore
-        self.distribution.extra_bin = extension.extraBinDirs  # type: ignore
-
         extension.log(
             f"Moving build python module '{pyd_path}' -> '{ext_path}'"
         )
@@ -163,63 +156,39 @@ class _Build(build_ext):
         # copy any dependencies
         # TODO use additional bin dirs
 
-        # TODO stubs
-
-
-class _InstallLibs(install_lib):
-    """
-    Copies any additional dependency libs
-    """
-
-    def run(self) -> None:
-
-        build_dir: pathlib.Path = self.distribution.build_dir  # type: ignore
-        primary_bin_dir: pathlib.Path = self.distribution.primary_bin_dir  # type: ignore
-        lib_name: pathlib.Path = self.distribution.lib_name  # type: ignore
-        extra_bin: Optional[List[str]
-                            ] = self.distribution.extra_bin  # type: ignore
-
         libDirs = [primary_bin_dir]
         # Copy additional dependencies
-        # no need to do this on linux, since you should be using auditwheel anyway
+        # only do this on windows, since auditwheel will take care of it
+        # on linux
         if IS_WINDOWS:
             # Just a list because it's a small number of items
-            fileTypes = [".dll", ".pyd"]
-            if extra_bin is not None:
+            fileTypes = [".dll", ".pyd", ".so"]
+            if extension.extraBinDirs is not None:
                 libDirs.extend(
-                    (build_dir / pathlib.Path(x) / "Release")
-                    for x in extra_bin
+                    (build_dir / pathlib.Path(x))
+                    for x in extension.extraBinDirs
                 )
-            libs = []
+            libs = {pyd_path}
             for libdir in libDirs:
                 for file in os.listdir(libdir):
-                    if file == lib_name.name:
-                        # skip the primary lib we already copied
-                        continue
                     _, ext = os.path.splitext(file)
                     if ext in fileTypes:
                         # Copy the file
                         src = libdir / file
-                        dest = os.path.join(self.build_dir, file)
-                        libs.append(file)
-                        self.distribution.announce(
-                            f'Copying lib: {src} -> {dest}'
-                        )
-                        shutil.copy(src, dest)
+                        dest = build_dir / file
+                        if dest in libs:
+                            # skip the primary lib we already copied
+                            continue
+                        libs.add(dest)
+                        extension.log(f'Copying lib: {src} -> {dest}')
+                        shutil.move(src, dest)
 
-        # We already build the libs in _Build
-        self.skip_build = True
-        # Call the normal install_lib
-        super().run()
+        # TODO stubs
 
 
 def setup(modules: List[PyBindModule], *args, **kwargs):
     setuptools.setup(
-        ext_modules=modules,
-        *args,
-        cmdclass={
-            'build_ext': _Build,
-            'install_lib': _InstallLibs,
-        },
-        **kwargs
+        ext_modules=modules, *args, cmdclass={
+            'build_ext': _Build
+        }, **kwargs
     )
