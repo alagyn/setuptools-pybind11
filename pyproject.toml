@@ -2,6 +2,10 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.distutils.egg_info]
+egg_base = "build"
+
+
 [project]
 name = "setuptools-pybind11"
 version = "0.1.0"

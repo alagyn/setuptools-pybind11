@@ -188,7 +188,10 @@ class _Build(build_ext):
 
 def setup(modules: List[PyBindModule], *args, **kwargs):
     setuptools.setup(
-        ext_modules=modules, *args, cmdclass={
+        ext_modules=modules,
+        *args,
+        cmdclass={
             'build_ext': _Build
-        }, **kwargs
+        },
+        **kwargs,
     )
