@@ -165,10 +165,10 @@ class _Build(build_ext):
         if IS_WINDOWS:
             libDirs = [primary_bin_dir]
             # Just a list because it's a small number of items
-            fileTypes = [".dll", ".pyd", ".so"]
+            fileTypes = [".dll", ".pyd", ".so", ".lib"]
             if extension.extraBinDirs is not None:
                 libDirs.extend(
-                    (build_dir / pathlib.Path(x))
+                    (build_dir / pathlib.Path(x) / "Release")
                     for x in extension.extraBinDirs
                 )
             libs = {pyd_path}
@@ -178,7 +178,7 @@ class _Build(build_ext):
                     if ext in fileTypes:
                         # Copy the file
                         src = libdir / file
-                        dest = build_dir / file
+                        dest = ext_path.parent / file
                         if dest in libs:
                             # skip the primary lib we already copied
                             continue
