@@ -8,7 +8,7 @@ egg_base = "build"
 
 [project]
 name = "setuptools-pybind11"
-version = "0.1.0"
+version = "0.3.0"
 authors = [{ name = "Alagyn" }]
 description = "Setuptools extension for building pybind11 libraries with CMake"
 readme = "README.md"
@@ -21,7 +21,7 @@ classifiers = [
     "Intended Audience :: Developers",
 ]
 
-dependencies = ["build", "wheel"]
+dependencies = ["build", "wheel", "pybind11-stubgen"]
 
 [project.optional-dependencies]
 cmake = ["cmake"]

@@ -2,8 +2,12 @@
 requires = [
     "setuptools",
     "wheel",
-    #"setuptools-pybind11" should also have this
-    "cmake", # shouldn't need this, just use setuptools-pybind11[cmake]
+    # Should only need this
+    #"setuptools-pybind11",
+    # but we are manually adding further deps here so we can test without
+    # needing it to be available on pypi:
+    "cmake",
+    "pybind11-stubgen",
 ]
 build-backend = "setuptools.build_meta"
 

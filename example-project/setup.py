@@ -4,4 +4,13 @@ import os.path
 
 SRC_DIR = os.path.dirname(__file__)
 
-setup([PyBindModule("example", SRC_DIR, dep_bin_prefixes=["example-dep"])])
+setup(
+    [
+        PyBindModule(
+            "example",
+            SRC_DIR,
+            dep_bin_prefixes=["example-dep"],
+            data_dirs=[("example-dep", "example-path")]
+        )
+    ]
+)

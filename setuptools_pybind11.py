@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 import os
 import shutil
 import pathlib
@@ -26,7 +26,8 @@ class PyBindModule(setuptools.Extension):
         # TODO change this to be a list of files?
         dep_bin_prefixes: Optional[List[str]] = None,
         cmake_config_options: List[str] = list(),
-        cmake_build_options: List[str] = list()
+        cmake_build_options: List[str] = list(),
+        data_dirs: List[Tuple[str, str]] = list()
     ):
         """
         Params:
@@ -36,6 +37,7 @@ class PyBindModule(setuptools.Extension):
           dep_bin_prefix - list of any additional folders to search for dependent shared libs
           cmake_config_options - Any extra cmd line arguments to be set during cmake config
           cmake_build_options - Any extra cmd line arguments to be set during cmake build
+          data_dirs - List of any additional data dirs (E.G. include dirs) and output paths
         """
         # TODO docstring
         # call super with no sources, since we are controlling the build
@@ -46,6 +48,7 @@ class PyBindModule(setuptools.Extension):
         self.extraConfigOptions = cmake_config_options
         self.extraBuildOptions = cmake_build_options
         self.binPrefix = bin_prefix
+        self.data_dirs = data_dirs
 
     def log(self, msg: str):
         # log with the module name at the start
@@ -156,11 +159,11 @@ class _Build(build_ext):
         # copy any dependencies
         # TODO use additional bin dirs
 
-        libDirs = [primary_bin_dir]
         # Copy additional dependencies
         # only do this on windows, since auditwheel will take care of it
         # on linux
         if IS_WINDOWS:
+            libDirs = [primary_bin_dir]
             # Just a list because it's a small number of items
             fileTypes = [".dll", ".pyd", ".so"]
             if extension.extraBinDirs is not None:
@@ -183,7 +186,41 @@ class _Build(build_ext):
                         extension.log(f'Copying lib: {src} -> {dest}')
                         shutil.move(src, dest)
 
-        # TODO stubs
+        extension.log("Generating stubs")
+
+        try:
+            oldPath = env['PYTHONPATH']
+        except KeyError:
+            oldPath = ""
+
+        if IS_WINDOWS:
+            newPath = f"{primary_bin_dir};" + oldPath
+        else:
+            newPath = f"{primary_bin_dir}:" + oldPath
+
+        env["PYTHONPATH"] = newPath
+
+        ret = subprocess.call(
+            [
+                sys.executable,
+                "-m",
+                "pybind11_stubgen",
+                extension.name,
+                "-o",
+                "."
+            ],
+            cwd=ext_path.parent
+        )
+
+        if ret != 0:
+            raise RuntimeError("Could not generate stubs")
+
+        extension.log("Copying data files")
+
+        for folder, outpath in extension.data_dirs:
+            shutil.copytree(
+                folder, ext_path.parent / f'{extension.name}' / outpath
+            )
 
 
 def setup(modules: List[PyBindModule], *args, **kwargs):
