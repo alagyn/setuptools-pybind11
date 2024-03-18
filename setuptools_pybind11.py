@@ -171,7 +171,7 @@ class _Build(build_ext):
                     (build_dir / pathlib.Path(x) / "Release")
                     for x in extension.extraBinDirs
                 )
-            libs = {pyd_path}
+            libs = {pyd_path.name, f'{pyd_path.stem}.lib'}
             for libdir in libDirs:
                 for file in os.listdir(libdir):
                     _, ext = os.path.splitext(file)
@@ -179,10 +179,10 @@ class _Build(build_ext):
                         # Copy the file
                         src = libdir / file
                         dest = ext_path.parent / file
-                        if dest in libs:
+                        if file in libs:
                             # skip the primary lib we already copied
                             continue
-                        libs.add(dest)
+                        libs.add(file)
                         extension.log(f'Copying lib: {src} -> {dest}')
                         shutil.move(src, dest)
 
@@ -218,9 +218,10 @@ class _Build(build_ext):
         extension.log("Copying data files")
 
         for folder, outpath in extension.data_dirs:
-            shutil.copytree(
-                folder, ext_path.parent / f'{extension.name}' / outpath
-            )
+            fullout = ext_path.parent / f'{extension.name}' / outpath
+            if os.path.exists(fullout):
+                shutil.rmtree(fullout)
+            shutil.copytree(folder, fullout)
 
 
 def setup(modules: List[PyBindModule], *args, **kwargs):
