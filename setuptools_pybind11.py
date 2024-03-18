@@ -218,7 +218,7 @@ class _Build(build_ext):
         extension.log("Copying data files")
 
         for folder, outpath in extension.data_dirs:
-            fullout = ext_path.parent / f'{extension.name}' / outpath
+            fullout = ext_path.parent / f'{extension.name}.data' / outpath
             if os.path.exists(fullout):
                 shutil.rmtree(fullout)
             shutil.copytree(folder, fullout)
