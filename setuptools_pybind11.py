@@ -27,7 +27,7 @@ class PyBindModule(setuptools.Extension):
         dep_bin_prefixes: Optional[List[str]] = None,
         cmake_config_options: List[str] = list(),
         cmake_build_options: List[str] = list(),
-        data_dirs: List[Tuple[str, str]] = list()
+        inc_dirs: List[Tuple[str, str]] = list()
     ):
         """
         Params:
@@ -37,7 +37,7 @@ class PyBindModule(setuptools.Extension):
           dep_bin_prefix - list of any additional folders to search for dependent shared libs
           cmake_config_options - Any extra cmd line arguments to be set during cmake config
           cmake_build_options - Any extra cmd line arguments to be set during cmake build
-          data_dirs - List of any additional data dirs (E.G. include dirs) and output paths
+          inc_dirs - List of any additional data dirs (E.G. include dirs) and output paths
         """
         # TODO docstring
         # call super with no sources, since we are controlling the build
@@ -48,7 +48,7 @@ class PyBindModule(setuptools.Extension):
         self.extraConfigOptions = cmake_config_options
         self.extraBuildOptions = cmake_build_options
         self.binPrefix = bin_prefix
-        self.data_dirs = data_dirs
+        self.incDirs = inc_dirs
 
     def log(self, msg: str):
         # log with the module name at the start
@@ -215,10 +215,11 @@ class _Build(build_ext):
         if ret != 0:
             raise RuntimeError("Could not generate stubs")
 
-        extension.log("Copying data files")
+        datadir = ext_path.parent / f'{self.distribution.get_fullname()}.inc'
+        extension.log(f"Copying data files to {datadir}")
 
-        for folder, outpath in extension.data_dirs:
-            fullout = ext_path.parent / f'{extension.name}.data' / outpath
+        for folder, outpath in extension.incDirs:
+            fullout = datadir / outpath
             if os.path.exists(fullout):
                 shutil.rmtree(fullout)
             shutil.copytree(folder, fullout)

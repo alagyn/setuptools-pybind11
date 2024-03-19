@@ -10,7 +10,7 @@ setup(
             "example",
             SRC_DIR,
             dep_bin_prefixes=["example-dep"],
-            data_dirs=[("example-dep", "example-path")]
+            inc_dirs=[("example-dep", "example-path")]
         )
     ]
 )
