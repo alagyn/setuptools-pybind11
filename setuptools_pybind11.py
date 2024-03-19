@@ -87,7 +87,7 @@ class _Build(build_ext):
         env["CMAKE_BUILD_PARALLEL_LEVEL"] = "8"
         env["Python3_ROOT_DIR"] = pyRoot
 
-        args = ["cmake", "-S", extension.sourcedir, "-B", build_dir]
+        args = ["cmake", "-S", extension.sourcedir, "-B", str(build_dir)]
         if not IS_WINDOWS:
             args.append("-DCMAKE_BUILD_TYPE=Release")
         # Add user supplied args
@@ -104,7 +104,7 @@ class _Build(build_ext):
         args = [
             "cmake",
             "--build",
-            build_dir,  # TODO
+            str(build_dir),  # TODO
             # "--target", extension.name
         ]
 
