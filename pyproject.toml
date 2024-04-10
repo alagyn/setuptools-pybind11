@@ -5,10 +5,9 @@ build-backend = "setuptools.build_meta"
 [tool.distutils.egg_info]
 egg_base = "build"
 
-
 [project]
 name = "setuptools-pybind11"
-version = "0.3.2"
+version = "0.4.0"
 authors = [{ name = "Alagyn" }]
 description = "Setuptools extension for building pybind11 libraries with CMake"
 readme = "README.md"

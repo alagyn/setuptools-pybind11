@@ -5,25 +5,34 @@ Setuptools extension for building pybind11 libraries with CMake
 Add setuptools-pybind11 to your `pyproject.toml`
 ```toml
 [build-system]
-requires = ["setuptools", "wheel", "setuptools-pybind11[cmake]"]
-```
+requires = [
+    "setuptools", 
+    "wheel", 
+    # Use setuptools-pybind11 if you don't want to automatically install cmake
+    "setuptools-pybind11[cmake]"
+    ]
+# set this package as the backend
+build-backend="setuptools_pybind11"
 
-Use `setuptools-pybind11` if you don't want to automatically install cmake
+[project]
+name = "example"
+version = "0.1.0"
+... # other project stuff
 
-Create a `setup.py` file
-```py
-from setuptools_pybind11 import PyBindModule, setup
-
-SRC_DIR = os.path.dirname(__file__)
-
-setup([
-    PyBindModule(
-        module_name="example",
-        source_dir=SRC_DIR,
-        dep_bin_prefixes=["example-dep"]
-    )]
-)
+# you can define multiple modules
+[tool.setuptools-pybind11.modules.example]
+# defaults to this
+source_dir = "."
+# prefix in build directory to main binary
+bin_prefix = ""
+# binary dir prefixes for dependencies
+dep_bin_prefixes = ["example-dep"]
+# include/data directories and their name (placed under [package-name]-[version].inc/path)
+inc_dirs = [["example-dep", "example-path"]]
+# any additional cmake configs you need
+cmake_config_options = ["-DMYCMAKE_OPTION=ON"]
+cmake_build_options = ["--MyBuildOption"]
 ```
 
 Build your module
-`python -m build --wheel`
+`python -m build`
