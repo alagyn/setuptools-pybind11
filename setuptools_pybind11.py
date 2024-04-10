@@ -6,10 +6,16 @@ import pathlib
 import sys
 import subprocess
 
+if sys.version_info.major == 3 and sys.version_info.minor < 11:
+    import tomli  # type: ignore
+else:
+    import tomllib as tomli  # type: ignore
+
 import setuptools
 from setuptools.command.build_ext import build_ext
 
-SOURCE_DIR, _ = os.path.split(__file__)
+from setuptools import build_meta
+
 IS_WINDOWS = sys.platform == "win32"
 
 
@@ -234,3 +240,113 @@ def setup(modules: List[PyBindModule], *args, **kwargs):
         },
         **kwargs,
     )
+
+
+__all__ = [
+    'get_requires_for_build_sdist',
+    'get_requires_for_build_wheel',
+    'prepare_metadata_for_build_wheel',
+    'build_wheel',
+    'build_sdist'
+]
+
+
+# subclass the normal setuptools backend
+class _BuildBackend(build_meta._BuildMetaBackend):
+    SOURCE_DIR = "source_dir"
+    BIN_PREFIX = "bin_prefix"
+    DEP_BIN_PREFIXES = "dep_bin_prefixes"
+    INC_DIRS = "inc_dirs"
+    CMAKE_CONFIG = "cmake_config_options"
+    CMAKE_BUILD = "cmake_build_options"
+
+    VALID_KEYS = {
+        SOURCE_DIR,
+        BIN_PREFIX,
+        DEP_BIN_PREFIXES,
+        INC_DIRS,
+        CMAKE_CONFIG,
+        CMAKE_BUILD
+    }
+
+    def run_setup(self, setup_script: str = "setup.py") -> None:
+        # ignore the passed arg, and just directly call
+        # setup here after loading the pyproject args
+        with open("pyproject.toml", mode='rb') as f:
+            project = tomli.load(f)
+
+        try:
+            moduleConfigs = project["tool"]["setuptools-pybind11"]["modules"]
+        except KeyError:
+            logging.warn("No pybind11 modules defined, exitting")
+            return
+
+        modules = []
+
+        for moduleName, configs in moduleConfigs.items():
+            badKey = False
+            for key in configs.keys():
+                if key not in self.VALID_KEYS:
+                    logging.error(
+                        f"Unknown config key tools.setuptools-pybind11.modules.{moduleName}.{key}"
+                    )
+                    badKey = True
+
+            if badKey:
+                raise RuntimeError("Invalid config keys")
+
+            try:
+                sourceDir = configs["source_dir"]
+            except KeyError:
+                sourceDir = "."
+
+            # make source dir relative to pyproject.toml
+            if not os.path.isabs(sourceDir):
+                sourceDir = os.path.abspath(sourceDir)
+
+            try:
+                binPrefix = configs["bin_prefix"]
+            except KeyError:
+                binPrefix = ""
+
+            try:
+                depBinPrefixes = configs['dep_bin_prefixes']
+            except KeyError:
+                depBinPrefixes = []
+
+            try:
+                incDirs = configs["inc_dirs"]
+            except KeyError:
+                incDirs = []
+
+            try:
+                cmakeConfigOptions = configs["cmake_config_options"]
+            except KeyError:
+                cmakeConfigOptions = []
+
+            try:
+                cmakeBuildOptions = configs["cmake_build_options"]
+            except KeyError:
+                cmakeBuildOptions = []
+
+            modules.append(
+                PyBindModule(
+                    module_name=moduleName,
+                    source_dir=sourceDir,
+                    bin_prefix=binPrefix,
+                    dep_bin_prefixes=depBinPrefixes,
+                    inc_dirs=incDirs,
+                    cmake_config_options=cmakeConfigOptions,
+                    cmake_build_options=cmakeBuildOptions
+                )
+            )
+
+        setup(modules=modules)
+
+
+build_meta._BACKEND = _BuildBackend()
+get_requires_for_build_wheel = build_meta._BACKEND.get_requires_for_build_wheel
+get_requires_for_build_sdist = build_meta._BACKEND.get_requires_for_build_sdist
+prepare_metadata_for_build_wheel = build_meta._BACKEND.prepare_metadata_for_build_wheel
+build_wheel = build_meta._BACKEND.build_wheel
+build_sdist = build_meta._BACKEND.build_sdist

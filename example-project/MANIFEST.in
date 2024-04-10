@@ -1,0 +1,8 @@
+recursive-include src *
+recursive-include example-dep *
+recursive-include pybind11 *
+include CMakeLists.txt
+
+prune pybind11/docs
+prune pybind11/tests
+prune pybind11/.github

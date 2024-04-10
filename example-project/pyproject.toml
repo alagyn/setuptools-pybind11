@@ -2,14 +2,10 @@
 requires = [
     "setuptools",
     "wheel",
-    # Should only need this
-    #"setuptools-pybind11",
-    # but we are manually adding further deps here so we can test without
-    # needing it to be available on pypi:
-    "cmake",
-    "pybind11-stubgen",
+    # this is required, but commented out so its easier to test locally
+    #"setuptools-pybind11[cmake]"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "setuptools_pybind11"
 
 [tool.distutils.egg_info]
 egg_base = "build"
@@ -37,3 +33,17 @@ cmake = ["cmake"]
 [project.urls]
 "Homepage" = "https://github.com/alagyn/setuptools-pybind11"
 "Bug Tracker" = "https://github.com/alagyn/setuptools-pybind11/issues"
+
+# you can define multiple modules
+[tool.setuptools-pybind11.modules.example]
+# defaults to this
+source_dir = "."
+# prefix in build directory to main binary
+bin_prefix = ""
+# binary dirs for dependencies
+dep_bin_prefixes = ["example-dep"]
+# include/data directories and their name (placed under [package-name]-[version].inc/path)
+inc_dirs = [["example-dep", "example-path"]]
+# any additional cmake configs you need
+cmake_config_options = ["-DMYCMAKE_OPTION=ON"]
+cmake_build_options = ["--MyBuildOption"]
