@@ -157,7 +157,7 @@ class _Build(build_ext):
         pyd_path = potentials[0]
 
         extension.log(
-            f"Moving build python module '{pyd_path}' -> '{ext_path}'"
+            f"Moving built python module '{pyd_path}' -> '{ext_path}'"
         )
         # copy lib to the name setuptools wants it to be
         shutil.copy(pyd_path, ext_path)
